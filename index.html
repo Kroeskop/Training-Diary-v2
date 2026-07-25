@@ -12,6 +12,7 @@
     --accent:#c8f542;--accent-dim:rgba(200,245,66,0.12);
     --bjj:#3b82f6;--bjj-dim:rgba(59,130,246,0.12);
     --gym:#c8f542;--gym-dim:rgba(200,245,66,0.12);
+    --sc:#f97316;--sc-dim:rgba(249,115,22,0.12);
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--black);color:var(--white);font-family:'Space Grotesk',sans-serif;min-height:100vh;}
@@ -63,6 +64,7 @@
   .day-badge{font-size:11px;font-weight:600;padding:2px 10px;border-radius:100px;letter-spacing:.05em;}
   .badge-gym{background:var(--gym-dim);color:var(--gym);}
   .badge-bjj{background:var(--bjj-dim);color:var(--bjj);}
+  .badge-sc{background:var(--sc-dim);color:var(--sc);}
   .badge-rest{background:rgba(255,255,255,.05);color:var(--muted);}
   .badge-both{background:rgba(120,180,255,.12);color:#a5c8ff;}
   .day-expand{color:var(--muted);font-size:12px;transition:transform .2s;}
@@ -75,6 +77,7 @@
   .type-btn:hover{border-color:var(--mid);color:var(--white);}
   .type-btn.active-gym{background:var(--gym-dim);border-color:var(--gym);color:var(--gym);}
   .type-btn.active-bjj{background:var(--bjj-dim);border-color:var(--bjj);color:var(--bjj);}
+  .type-btn.active-sc{background:var(--sc-dim);border-color:var(--sc);color:var(--sc);}
   .type-btn.active-both{background:rgba(120,180,255,.1);border-color:#a5c8ff;color:#a5c8ff;}
   .type-btn.active-rest{background:rgba(255,255,255,.05);border-color:var(--mid);color:var(--light);}
 
@@ -132,7 +135,7 @@
 
   .month-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
   .month-nav{display:flex;align-items:center;gap:12px;}
-  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;}
+  .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px;}
   .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
   .stat-val{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:var(--accent);line-height:1;margin-bottom:4px;}
   .stat-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
@@ -147,6 +150,7 @@
   .cal-cell.today{border-color:var(--accent);}
   .cal-cell.type-gym{background:var(--gym-dim);color:var(--gym);}
   .cal-cell.type-bjj{background:var(--bjj-dim);color:var(--bjj);}
+  .cal-cell.type-sc{background:var(--sc-dim);color:var(--sc);}
   .cal-cell.type-both{background:rgba(120,180,255,.1);color:#a5c8ff;}
   .cal-cell.type-rest{background:var(--dark);color:var(--muted);border-color:var(--border);}
   .cal-cell.no-data{background:var(--dark);color:var(--muted);}
@@ -235,6 +239,7 @@
       <div class="legend-item"><div class="legend-dot" style="background:#c8f542"></div>Gym</div>
       <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>BJJ</div>
       <div class="legend-item"><div class="legend-dot" style="background:#a5c8ff"></div>Both</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>S&amp;C</div>
       <div class="legend-item"><div class="legend-dot" style="background:#333"></div>Rest</div>
     </div>
     <div class="section-title">Calendar</div>
@@ -452,6 +457,7 @@ function renderWeek(){
           <button class="type-btn ${entry.type==='gym'?'active-gym':''}"  onclick="setType('${key}','gym',this)">Gym</button>
           <button class="type-btn ${entry.type==='bjj'?'active-bjj':''}"  onclick="setType('${key}','bjj',this)">BJJ</button>
           <button class="type-btn ${entry.type==='both'?'active-both':''}" onclick="setType('${key}','both',this)">Gym + BJJ</button>
+          <button class="type-btn ${entry.type==='sc'?'active-sc':''}"   onclick="setType('${key}','sc',this)">S&amp;C</button>
           <button class="type-btn ${entry.type==='rest'?'active-rest':''}" onclick="setType('${key}','rest',this)">Rest</button>
         </div>
         <div class="fields-grid">
@@ -736,13 +742,13 @@ function renderMonth(){
   const target=new Date(now.getFullYear(),now.getMonth()+currentMonthOffset,1);
   const year=target.getFullYear(),month=target.getMonth();
   document.getElementById('monthLabel').textContent=`${MONTHS[month]} ${year}`;
-  let gymDays=0,bjjDays=0,totalSessions=0;
+  let gymDays=0,bjjDays=0,scDays=0,totalSessions=0;
   const daysInMonth=new Date(year,month+1,0).getDate();
   for(let d=1;d<=daysInMonth;d++){
     const key=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const entry=cache.sessions[key];
     if(!entry||!entry.type||entry.type==='rest') continue;
-    totalSessions++; if(entry.type==='gym') gymDays++; if(entry.type==='bjj') bjjDays++;
+    totalSessions++; if(entry.type==='gym') gymDays++; if(entry.type==='bjj') bjjDays++; if(entry.type==='sc') scDays++;
     if(entry.type==='both'){gymDays++;bjjDays++;}
   }
   const mw=cache.weights.filter(w=>{const d=new Date(w.date);return d.getFullYear()===year&&d.getMonth()===month;});
@@ -752,6 +758,7 @@ function renderMonth(){
     <div class="stat-card"><div class="stat-val">${totalSessions}</div><div class="stat-label">Sessions</div></div>
     <div class="stat-card"><div class="stat-val">${gymDays}</div><div class="stat-label">Gym days</div></div>
     <div class="stat-card"><div class="stat-val">${bjjDays}</div><div class="stat-label">BJJ days</div></div>
+    <div class="stat-card"><div class="stat-val">${scDays}</div><div class="stat-label">S&amp;C days</div></div>
     <div class="stat-card"><div class="stat-val" style="font-size:18px">${weightChange}</div><div class="stat-label">Weight Δ</div></div>`;
   drawWeightChart(mw);
   renderCalendar(year,month,daysInMonth);
@@ -809,7 +816,7 @@ function renderLogList(year,month,daysInMonth){
     entries.push({d,entry});
   }
   if(!entries.length){list.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:16px 0">No sessions logged this month yet.</div>`;return;}
-  const typeColors={gym:'#c8f542',bjj:'#3b82f6',both:'#a5c8ff',rest:'#555'};
+  const typeColors={gym:'#c8f542',bjj:'#3b82f6',both:'#a5c8ff',sc:'#f97316',rest:'#555'};
   entries.forEach(({d,entry})=>{
     const el=document.createElement('div'); el.className='log-item';
     el.innerHTML=`
@@ -841,4 +848,3 @@ function renderLogList(year,month,daysInMonth){
 </script>
 </body>
 </html>
-
