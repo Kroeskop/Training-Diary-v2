@@ -135,7 +135,7 @@
 
   .month-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
   .month-nav{display:flex;align-items:center;gap:12px;}
-  .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px;}
+  .stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:24px;}
   .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
   .stat-val{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:var(--accent);line-height:1;margin-bottom:4px;}
   .stat-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
@@ -235,6 +235,10 @@
       <div class="section-title">Weight trend</div>
       <div class="weight-chart"><canvas id="weightCanvas"></canvas></div>
     </div>
+    <div class="weight-section">
+      <div class="section-title">Calories burned</div>
+      <div class="weight-chart"><canvas id="caloriesCanvas"></canvas></div>
+    </div>
     <div class="legend">
       <div class="legend-item"><div class="legend-dot" style="background:#c8f542"></div>Gym</div>
       <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>BJJ</div>
@@ -260,9 +264,12 @@
 
 <div class="modal-overlay" id="weightModal">
   <div class="modal">
-    <div class="modal-title">Log body weight</div>
+    <div class="modal-title">Log weight / calories</div>
     <div class="field-label">Weight (kg)</div>
     <input type="number" id="weightInput" step="0.1" min="40" max="200" placeholder="e.g. 82.5">
+    <div style="height:10px"></div>
+    <div class="field-label">Calories burned</div>
+    <input type="number" id="caloriesInput" step="1" min="0" placeholder="e.g. 450">
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeWeightModal()">Cancel</button>
       <button class="save-btn" onclick="saveWeight()" style="flex:1">Save</button>
@@ -481,6 +488,21 @@ function renderWeek(){
           <textarea class="notes-area" placeholder="Key details, grips, timing, what to drill next..." oninput="updateField('${key}','motdNotes',this.value)">${entry.motdNotes||''}</textarea>
         </div>
 
+        <div id="cardioSection-${key}" style="${entry.type==='gym'||entry.type==='both'?'':'display:none'}">
+          <div style="height:12px"></div>
+          <div class="exercise-section-title" style="color:var(--gym)">Cardio (bike, before weights)</div>
+          <div class="fields-grid">
+            <div>
+              <div class="field-label">Distance (km)</div>
+              <input type="number" step="0.1" min="0" placeholder="6" value="${entry.cardioKm||''}" oninput="updateField('${key}','cardioKm',this.value)">
+            </div>
+            <div>
+              <div class="field-label">Duration (mins)</div>
+              <input type="number" min="0" placeholder="15" value="${entry.cardioMins||''}" oninput="updateField('${key}','cardioMins',this.value)">
+            </div>
+          </div>
+        </div>
+
         <div class="exercise-section" id="exSection-${key}" style="${entry.type==='gym'||entry.type==='both'?'':'display:none'}">
           <div style="height:12px"></div>
           <div class="exercise-section-title">Exercise log</div>
@@ -629,16 +651,32 @@ function deleteSet(key,exId,idx){
 }
 
 // ─── WEIGHT ───────────────────────────────────────────────────────────────────
-function openWeightModal(){ document.getElementById('weightModal').classList.add('open'); document.getElementById('weightInput').focus(); }
-function closeWeightModal(){ document.getElementById('weightModal').classList.remove('open'); document.getElementById('weightInput').value=''; }
+function openWeightModal(){
+  const date=dateKey(today());
+  const entry=cache.weights.find(w=>w.date===date);
+  document.getElementById('weightInput').value = entry?.weight ?? '';
+  document.getElementById('caloriesInput').value = entry?.calories ?? '';
+  document.getElementById('weightModal').classList.add('open');
+  document.getElementById('weightInput').focus();
+}
+function closeWeightModal(){
+  document.getElementById('weightModal').classList.remove('open');
+  document.getElementById('weightInput').value='';
+  document.getElementById('caloriesInput').value='';
+}
 
 async function saveWeight(){
-  const val=parseFloat(document.getElementById('weightInput').value);
-  if(isNaN(val)||val<30||val>300) return;
+  const weightVal=parseFloat(document.getElementById('weightInput').value);
+  const caloriesVal=parseInt(document.getElementById('caloriesInput').value,10);
+  const hasWeight=!isNaN(weightVal)&&weightVal>=30&&weightVal<=300;
+  const hasCalories=!isNaN(caloriesVal)&&caloriesVal>=0;
+  if(!hasWeight&&!hasCalories) return;
   const date=dateKey(today());
   const idx=cache.weights.findIndex(w=>w.date===date);
-  if(idx>=0) cache.weights[idx].weight=val;
-  else cache.weights.push({date,weight:val});
+  const entry = idx>=0 ? cache.weights[idx] : {date};
+  if(hasWeight) entry.weight=weightVal;
+  if(hasCalories) entry.calories=caloriesVal;
+  if(idx>=0) cache.weights[idx]=entry; else cache.weights.push(entry);
   cache.weights.sort((a,b)=>a.date.localeCompare(b.date));
   saveCacheToStorage();
   showSync('syncing','Saving...');
@@ -655,8 +693,9 @@ async function saveWeight(){
 }
 
 function updateWeightDisplay(){
-  if(cache.weights.length){
-    const last=cache.weights[cache.weights.length-1];
+  const withWeight=cache.weights.filter(w=>typeof w.weight==='number');
+  if(withWeight.length){
+    const last=withWeight[withWeight.length-1];
     document.getElementById('currentWeightDisplay').textContent=`${last.weight} kg`;
   }
 }
@@ -751,16 +790,20 @@ function renderMonth(){
     totalSessions++; if(entry.type==='gym') gymDays++; if(entry.type==='bjj') bjjDays++; if(entry.type==='sc') scDays++;
     if(entry.type==='both'){gymDays++;bjjDays++;}
   }
-  const mw=cache.weights.filter(w=>{const d=new Date(w.date);return d.getFullYear()===year&&d.getMonth()===month;});
+  const mw=cache.weights.filter(w=>{const d=new Date(w.date);return d.getFullYear()===year&&d.getMonth()===month&&typeof w.weight==='number';});
+  const mc=cache.weights.filter(w=>{const d=new Date(w.date);return d.getFullYear()===year&&d.getMonth()===month&&typeof w.calories==='number';});
   let weightChange='—';
   if(mw.length>=2){ const diff=(mw[mw.length-1].weight-mw[0].weight).toFixed(1); weightChange=(diff>0?'+':'')+diff+' kg'; }
+  const totalCalories=mc.reduce((sum,w)=>sum+w.calories,0);
   document.getElementById('statsRow').innerHTML=`
     <div class="stat-card"><div class="stat-val">${totalSessions}</div><div class="stat-label">Sessions</div></div>
     <div class="stat-card"><div class="stat-val">${gymDays}</div><div class="stat-label">Gym days</div></div>
     <div class="stat-card"><div class="stat-val">${bjjDays}</div><div class="stat-label">BJJ days</div></div>
     <div class="stat-card"><div class="stat-val">${scDays}</div><div class="stat-label">S&amp;C days</div></div>
-    <div class="stat-card"><div class="stat-val" style="font-size:18px">${weightChange}</div><div class="stat-label">Weight Δ</div></div>`;
+    <div class="stat-card"><div class="stat-val" style="font-size:18px">${weightChange}</div><div class="stat-label">Weight Δ</div></div>
+    <div class="stat-card"><div class="stat-val">${mc.length?totalCalories:'—'}</div><div class="stat-label">Kcal burned</div></div>`;
   drawWeightChart(mw);
+  drawCaloriesChart(mc);
   renderCalendar(year,month,daysInMonth);
   renderLogList(year,month,daysInMonth);
 }
@@ -787,6 +830,33 @@ function drawWeightChart(mw){
   mw.forEach((w,i)=>{ const x=pad.l+(W-pad.l-pad.r)*(i/(mw.length-1)); const y=pad.t+(H-pad.t-pad.b)*((maxW-w.weight)/(maxW-minW)); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
   ctx.stroke();
   mw.forEach((w,i)=>{ const x=pad.l+(W-pad.l-pad.r)*(i/(mw.length-1)); const y=pad.t+(H-pad.t-pad.b)*((maxW-w.weight)/(maxW-minW)); ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fillStyle='#c8f542'; ctx.fill(); });
+}
+
+function drawCaloriesChart(mc){
+  const canvas=document.getElementById('caloriesCanvas');
+  const container=canvas.parentElement;
+  canvas.width=container.clientWidth-40; canvas.height=container.clientHeight-40;
+  const ctx=canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!mc.length){
+    ctx.fillStyle='#555'; ctx.font='12px Space Grotesk,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Log calories burned to see this chart',canvas.width/2,canvas.height/2); return;
+  }
+  const maxV=Math.max(...mc.map(w=>w.calories))*1.15||1;
+  const W=canvas.width,H=canvas.height,pad={l:36,r:10,t:10,b:20};
+  ctx.strokeStyle='#2a2a2a'; ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=pad.t+(H-pad.t-pad.b)*(i/4);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+    ctx.fillStyle='#555'; ctx.font='10px Space Mono,monospace'; ctx.textAlign='right';
+    ctx.fillText(Math.round(maxV-maxV*(i/4)),pad.l-4,y+4);
+  }
+  const slot=(W-pad.l-pad.r)/mc.length, barW=Math.max(3,slot-4);
+  ctx.fillStyle='#f97316';
+  mc.forEach((w,i)=>{
+    const x=pad.l+slot*i+(slot-barW)/2;
+    const barH=(H-pad.t-pad.b)*(w.calories/maxV);
+    ctx.fillRect(x,H-pad.b-barH,barW,barH);
+  });
 }
 
 function renderCalendar(year,month,daysInMonth){
@@ -825,6 +895,7 @@ function renderLogList(year,month,daysInMonth){
         <div class="log-type" style="color:${typeColors[entry.type]}">${entry.type.toUpperCase()}</div>
         ${entry.notes?`<div class="log-notes">${entry.notes}</div>`:''}
         ${entry.motd?`<div class="log-notes" style="color:var(--bjj);margin-top:3px">◈ ${entry.motd}</div>`:''}
+        ${(entry.cardioKm||entry.cardioMins)?`<div class="log-notes" style="color:var(--gym);margin-top:3px">🚴 ${entry.cardioKm?entry.cardioKm+'km':''}${entry.cardioKm&&entry.cardioMins?' · ':''}${entry.cardioMins?entry.cardioMins+' min':''}</div>`:''}
       </div>
       <div class="log-meta">${entry.duration?entry.duration+' min<br>':''}${entry.feeling?'★ '+entry.feeling+'/10':''}</div>`;
     list.appendChild(el);
@@ -843,6 +914,7 @@ function renderLogList(year,month,daysInMonth){
   document.getElementById('loadingOverlay').classList.add('hidden');
   renderWeek();
   document.getElementById('weightInput').addEventListener('keydown',e=>{if(e.key==='Enter') saveWeight();});
+  document.getElementById('caloriesInput').addEventListener('keydown',e=>{if(e.key==='Enter') saveWeight();});
   document.getElementById('weightModal').addEventListener('click',function(e){if(e.target===this) closeWeightModal();});
 })();
 </script>
