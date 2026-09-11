@@ -470,7 +470,7 @@ function renderWeek(){
         <div class="day-left">
           <span class="day-name">${DAYS[i]}</span>
           <span class="day-date">${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)}${isToday?' — today':''}</span>
-          ${entry.type?`<span class="day-badge badge-${entry.type==='both'?'both':entry.type}">${entry.type.toUpperCase()}</span>`:''}
+          ${entry.type?`<span class="day-badge badge-${entry.type==='both'?'both':entry.type}">${entry.type.toUpperCase()}</span>`:'<span class="day-badge badge-rest">REST</span>'}
         </div>
         <span class="day-expand">▼</span>
       </div>
