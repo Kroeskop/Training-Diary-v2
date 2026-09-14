@@ -280,18 +280,18 @@ const HEADERS = {
 // ─── PROGRAM ──────────────────────────────────────────────────────────────────
 const PROGRAM = {
   A: [
-    { id:'bench',    name:'DB Bench Press',    sets:4, scheme:'8/10/12/15'  },
-    { id:'row',      name:'Bent-over Row',      sets:4, scheme:'8/10/12/15'  },
-    { id:'rdl',      name:'Romanian Deadlift',  sets:3, scheme:'10/12/15'   },
-    { id:'shpress',  name:'DB Shoulder Press',  sets:3, scheme:'10/12/15'   },
-    { id:'facepull', name:'Face Pulls',         sets:3, scheme:'15/15/15'   },
+    { id:'bench',    name:'DB Bench Press',    sets:4, scheme:'8/10/12/14'  },
+    { id:'row',      name:'Bent-over Row',      sets:4, scheme:'8/10/12/14'  },
+    { id:'rdl',      name:'Romanian Deadlift',  sets:4, scheme:'8/10/12/14'  },
+    { id:'shpress',  name:'DB Shoulder Press',  sets:4, scheme:'8/10/12/14'  },
+    { id:'facepull', name:'Face Pulls',         sets:4, scheme:'8/10/12/14'  },
   ],
   B: [
-    { id:'latpull',  name:'Lat Pulldown',       sets:4, scheme:'8/10/12/15'  },
-    { id:'legpress', name:'Leg Press',          sets:4, scheme:'10/12/15/20' },
-    { id:'cablerow', name:'Seated Cable Row',   sets:3, scheme:'10/12/15'   },
-    { id:'hammer',   name:'Hammer Curls',       sets:3, scheme:'12/15/15'   },
-    { id:'legcurl',  name:'Leg Curl',           sets:3, scheme:'12/15/15'   },
+    { id:'latpull',  name:'Lat Pulldown',       sets:4, scheme:'8/10/12/14'  },
+    { id:'legpress', name:'Leg Press',          sets:4, scheme:'8/10/12/14'  },
+    { id:'cablerow', name:'Seated Cable Row',   sets:4, scheme:'8/10/12/14'  },
+    { id:'hammer',   name:'Hammer Curls',       sets:4, scheme:'8/10/12/14'  },
+    { id:'legcurl',  name:'Leg Curl',           sets:4, scheme:'8/10/12/14'  },
   ]
 };
 const ALL_EXERCISES = [...PROGRAM.A, ...PROGRAM.B];
@@ -470,7 +470,7 @@ function renderWeek(){
         <div class="day-left">
           <span class="day-name">${DAYS[i]}</span>
           <span class="day-date">${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)}${isToday?' — today':''}</span>
-          ${entry.type?`<span class="day-badge badge-${entry.type==='both'?'both':entry.type}">${entry.type.toUpperCase()}</span>`:'<span class="day-badge badge-rest">REST</span>'}
+          ${entry.type?`<span class="day-badge badge-${entry.type==='both'||entry.type==='sc'?'both':entry.type}">${entry.type==='sc'?'S&C':entry.type.toUpperCase()}</span>`:'<span class="day-badge badge-rest">REST</span>'}
         </div>
         <span class="day-expand">▼</span>
       </div>
@@ -479,6 +479,7 @@ function renderWeek(){
           <button class="type-btn ${entry.type==='gym'?'active-gym':''}"  onclick="setType('${key}','gym',this)">Gym</button>
           <button class="type-btn ${entry.type==='bjj'?'active-bjj':''}"  onclick="setType('${key}','bjj',this)">BJJ</button>
           <button class="type-btn ${entry.type==='both'?'active-both':''}" onclick="setType('${key}','both',this)">Gym + BJJ</button>
+          <button class="type-btn ${entry.type==='sc'?'active-gym':''}"    onclick="setType('${key}','sc',this)">S&amp;C</button>
         </div>
         <div class="fields-grid">
           <div>
@@ -501,7 +502,7 @@ function renderWeek(){
           <textarea class="notes-area" placeholder="Key details, grips, timing, what to drill next..." oninput="updateField('${key}','motdNotes',this.value)">${entry.motdNotes||''}</textarea>
         </div>
 
-        <div class="exercise-section" id="exSection-${key}" style="${entry.type==='gym'||entry.type==='both'?'':'display:none'}">
+        <div class="exercise-section" id="exSection-${key}" style="${entry.type==='gym'||entry.type==='both'||entry.type==='sc'?'':'display:none'}">
           <div style="height:12px"></div>
           <div class="exercise-section-title">Exercise log</div>
           <div class="exercise-plan-toggle">
